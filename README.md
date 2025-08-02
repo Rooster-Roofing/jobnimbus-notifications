@@ -1,54 +1,49 @@
-# JobNimbus to Google Chat Notification
+# JobNimbus Activity to Google Chat Notification
 
-This repository contains a GitHub Actions workflow that receives a webhook from JobNimbus when a new document is created and sends a formatted notification to a Google Chat space.
+This repository contains a GitHub Actions workflow that receives a webhook from JobNimbus (via a Pipedream proxy) when a specific activity note is created and sends a formatted notification to a Google Chat space.
 
 ## 🚀 How It Works
 
-1.  **JobNimbus Automation**: A JobNimbus automation rule is set up to send a webhook to a specific GitHub repository URL when an "Attachment is Created" of type "Document".
+1.  **JobNimbus Automation**: An automation rule triggers when an "Activity is Created" that matches specific keywords (e.g., "Document Created").
+2.  **Pipedream Proxy**: JobNimbus sends a webhook with the activity note to a Pipedream workflow, which acts as a secure proxy.
+3.  **GitHub Actions Workflow**: Pipedream securely calls this repository's GitHub Actions workflow. The workflow parses the note, formats a message, and sends it to Google Chat.
 
-2.  **GitHub Actions Workflow**: The webhook triggers a GitHub Actions workflow. This workflow uses a Node.js script to parse the webhook payload from JobNimbus.
+## 🧱 Setup Guide
 
-3.  **Google Chat Notification**: The script constructs a formatted card message and sends it to a specified Google Chat webhook URL.
+### Phase 1: GitHub Setup
 
-## 🧱 Setup
+1.  **Confirm this Repository is Correct**: Ensure your repository contains the `.github/workflows/jobnimbus-webhook.yml` file.
+2.  **Create a GitHub Personal Access Token (PAT)**:
+    * Go to **Settings > Developer settings > Personal access tokens > Tokens (classic)**.
+    * Generate a new token with the `repo` scope.
+    * Copy the token immediately. You will need it for Pipedream.
+3.  **Add Secrets to this Repository**:
+    * Go to **Settings > Secrets and variables > Actions**.
+    * Ensure you have a secret named `GCHAT_WEBHOOK_URL` containing the webhook URL for your Google Chat space.
 
-1.  **Clone this repository** to your own GitHub account.
+### Phase 2: Pipedream Setup
 
-2.  **Create a GitHub Personal Access Token**:
-    * Go to your GitHub **Settings** > **Developer settings** > **Personal access tokens**.
-    * Click **Generate new token**.
-    * Give the token a name (e.g., "JobNimbus Webhook").
-    * Under **Select scopes**, check the `repo` scope.
-    * Click **Generate token** and copy the token. You will need this for the JobNimbus webhook URL.
+1.  **Create a Pipedream Workflow**:
+    * Go to Pipedream.com and create a new workflow with an **HTTP / Webhook** trigger.
+    * Copy the unique webhook URL Pipedream provides.
+2.  **Add a Node.js Code Step**:
+    * Add a **Run Node.js code** step and use the appropriate script to call the GitHub API `dispatches` endpoint.
+    * Connect your GitHub account to the step to securely use your PAT.
+    * **Deploy** the workflow.
 
-3.  **Add Secrets to your GitHub Repository**:
-    * In your repository, go to **Settings** > **Secrets and variables** > **Actions**.
-    * Click **New repository secret** and add the following secret:
-        * `GCHAT_WEBHOOK_URL`: The webhook URL for your Google Chat space.
+### Phase 3: JobNimbus Setup
 
-4.  **Set up the JobNimbus Webhook**:
-    * In JobNimbus, create a new automation rule with the following settings:
-        * **Trigger**: When an **Attachment** is **Created**.
-        * **Condition**: If **Type** is equal to **Document**.
-        * **Action**: **Webhook POST**.
-    * For the webhook URL, use the following format:
-        ```
-        [https://api.github.com/repos/YOUR_USERNAME/YOUR_REPOSITORY/dispatches](https://api.github.com/repos/YOUR_USERNAME/YOUR_REPOSITORY/dispatches)
-        ```
-        Replace `YOUR_USERNAME` and `YOUR_REPOSITORY` with your GitHub username and repository name.
-    * For the webhook headers, add the following:
-        * `Authorization`: `token YOUR_GITHUB_PERSONAL_ACCESS_TOKEN`
-        * `Accept`: `application/vnd.github.v3+json`
-    * For the webhook body, you can pass a JSON payload with the JobNimbus data you want to include in the notification. For example:
+1.  **Create the Automation Rule**:
+    * **Trigger**: When an **Activity** is **Created**.
+    * **Conditions**: If **Type** is equal to **Note** and the note contains your desired keywords (e.g., 'Document Created').
+    * **Action**: **Webhook POST**.
+2.  **Configure the Webhook**:
+    * **URL**: Paste the **Pipedream URL** from Phase 2.
+    * **Body (Payload)**: Use the following JSON to send the necessary data:
         ```json
         {
-          "event_type": "jobnimbus_document_created",
-          "client_payload": {
-            "contact_name": "{{JobPrimaryContactDisplayName}}",
-            "job_address": "{{JobAddressLine1}}",
-            "document_link": "{{AttachmentFileUrl}}"
-          }
+          "note": "{{Note}}",
+          "jnid": "{{JnId}}"
         }
         ```
-
-Now, whenever a new document is created in JobNimbus that matches the automation rule, it will trigger the GitHub Actions workflow and send a notification to your Google Chat space.
+3.  **Save** the automation rule.
