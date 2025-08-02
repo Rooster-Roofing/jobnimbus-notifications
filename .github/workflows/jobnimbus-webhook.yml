@@ -1,44 +1,51 @@
-name: Notify Google Chat on Material Confirmation Update
+name: JobNimbus Activity to Google Chat
 
 on:
   workflow_dispatch:
     inputs:
-      contact_name:
-        description: 'The display name of the primary contact'
+      activity_note:
+        description: 'The full text of the JobNimbus activity note'
         required: true
-      job_address:
-        description: 'The first line of the job address'
-        required: true
-      document_link:
-        description: 'A direct URL to the created document'
-        required: true
+        default: 'Document Created | N/A | Unknown User | Unknown Job | 2025-08-02T12:00:00Z'
+      job_id:
+        description: 'The JobNimbus ID for the related job'
+        required: false # Job ID might not always be available
+        default: '1164'
 
 jobs:
-  notify:
+  build_and_send_notification:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Update Node.js script with received data
+      # Step 1: Parse the incoming note text to extract details
+      - name: Parse Activity Note
+        id: parser
         run: |
-          # This script is a placeholder to demonstrate passing data.
-          # In a real scenario, your main script would read these env vars.
-          echo "Received contact: ${{ github.event.inputs.contact_name }}"
-          echo "Received address: ${{ github.event.inputs.job_address }}"
+          # The note text is received as a single string, e.g., "Document Created | Proposal Created | Reina Toledo ..."
+          # We use the pipe '|' as a delimiter to split it into parts
+          IFS='|' read -ra parts <<< "${{ github.event.inputs.activity_note }}"
 
-      - name: Send Google Chat Notification
+          # Trim whitespace from each part and assign to a variable
+          activity_type=$(echo "${parts[0]}" | xargs)
+          document_type=$(echo "${parts[1]}" | xargs)
+          user_name=$(echo "${parts[2]}" | xargs)
+          
+          # Output each piece of data so it can be used in later steps
+          echo "activity_type=${activity_type}" >> $GITHUB_ENV
+          echo "document_type=${document_type}" >> $GITHUB_ENV
+          echo "user_name=${user_name}" >> $GITHUB_ENV
+
+      # Step 2: Send the formatted notification to Google Chat
+      - name: Send to Google Chat
         uses: peter-evans/webhook-action@v2
         with:
           url: ${{ secrets.GCHAT_WEBHOOK_URL }}
-          payload-file: .github/workflows/gchat-payload.json
           payload: |
             {
               "cards": [
                 {
                   "header": {
-                    "title": "Confirmation of Materials Document Created",
-                    "subtitle": "${{ github.event.inputs.contact_name }} – ${{ github.event.inputs.job_address }}",
+                    "title": "${{ env.activity_type }}",
+                    "subtitle": "Activity Logged by: ${{ env.user_name }}",
                     "imageUrl": "https://ik.imagekit.io/roosterroofing/Untitled%20design%20(13).png?updatedAt=1752077429449",
                     "imageStyle": "IMAGE"
                   },
@@ -46,18 +53,19 @@ jobs:
                     {
                       "widgets": [
                         {
-                          "textParagraph": {
-                            "text": "The <b>Confirmation of Materials</b> document for this job has progressed. See status below:<br><br>✔️ Document Created<br>📤 Document Sent<br>✍️ Document Signed"
+                          "decoratedText": {
+                            "topLabel": "Document Type",
+                            "text": "${{ env.document_type }}"
                           }
                         },
                         {
                           "buttons": [
                             {
                               "textButton": {
-                                "text": "VIEW DOCUMENT",
+                                "text": "VIEW JOB IN JOBNIMBUS",
                                 "onClick": {
                                   "openLink": {
-                                    "url": "${{ github.event.inputs.document_link }}"
+                                    "url": "https://app.jobnimbus.com/job/${{ github.event.inputs.job_id }}"
                                   }
                                 }
                               }
