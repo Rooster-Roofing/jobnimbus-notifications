@@ -1,3 +1,4 @@
+# This is the final, correct code for your workflow file.
 name: JobNimbus Activity to Google Chat
 
 on:
@@ -7,9 +8,9 @@ on:
         description: 'The full text of the JobNimbus activity note'
         required: true
         default: 'Document Created | N/A | Unknown User | Unknown Job | 2025-08-02T12:00:00Z'
-      job_id:
+      job_number:
         description: 'The JobNimbus ID for the related job'
-        required: false # Job ID might not always be available
+        required: false
         default: '1164'
 
 jobs:
@@ -18,7 +19,7 @@ jobs:
     steps:
       # Step 1: Parse the incoming note text to extract details
       - name: Parse Activity Note
-        id: parser
+        number: parser
         run: |
           # The note text is received as a single string, e.g., "Document Created | Proposal Created | Reina Toledo ..."
           # We use the pipe '|' as a delimiter to split it into parts
