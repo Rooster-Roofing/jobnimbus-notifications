@@ -1,20 +1,38 @@
-# This is the final, correct code for your workflow file.
 name: JobNimbus Activity to Google Chat
 
 on:
   workflow_dispatch:
     inputs:
-      note_text:
-        description: 'The text from the note field, e.g., "Document Created"'
+      activity_note:
+        description: 'The full text of the JobNimbus activity note'
         required: true
-      primary_id:
-        description: 'The ID of the primary related record (the Job ID)'
+      job_id:
+        description: 'The JobNimbus ID for the related job'
         required: true
 
 jobs:
-  send_notification:
+  build_and_send_notification:
     runs-on: ubuntu-latest
     steps:
+      # Step 1: Parse the multi-line note text to extract details
+      - name: Parse Activity Note
+        id: parser
+        run: |
+          # The multi-line note text is passed in as an environment variable
+          NOTE_TEXT="${{ github.event.inputs.activity_note }}"
+
+          # Use 'awk' to find the line with the key (e.g., "Note") and print the *next* line, which is the value.
+          # Use 'xargs' to trim any leading/trailing whitespace.
+          ACTIVITY_TYPE=$(echo "$NOTE_TEXT" | awk '/^Note$/{getline; print}' | xargs)
+          DOCUMENT_TYPE=$(echo "$NOTE_TEXT" | awk '/^Type$/{getline; print}' | xargs)
+          USER_NAME=$(echo "$NOTE_TEXT" | awk '/^Created By$/{getline; print}' | xargs)
+
+          # Output each piece of data so it can be used in the next step
+          echo "activity_type=${ACTIVITY_TYPE}" >> $GITHUB_ENV
+          echo "document_type=${DOCUMENT_TYPE}" >> $GITHUB_ENV
+          echo "user_name=${USER_NAME}" >> $GITHUB_ENV
+
+      # Step 2: Send the formatted notification to Google Chat
       - name: Send to Google Chat
         uses: peter-evans/webhook-action@v2
         with:
@@ -24,8 +42,8 @@ jobs:
               "cards": [
                 {
                   "header": {
-                    "title": "${{ github.event.inputs.note_text }}",
-                    "subtitle": "Job ID: ${{ github.event.inputs.primary_id }}",
+                    "title": "${{ env.activity_type }}",
+                    "subtitle": "Activity Logged by: ${{ env.user_name }}",
                     "imageUrl": "https://ik.imagekit.io/roosterroofing/Untitled%20design%20(13).png?updatedAt=1752077429449",
                     "imageStyle": "IMAGE"
                   },
@@ -33,8 +51,9 @@ jobs:
                     {
                       "widgets": [
                         {
-                          "textParagraph": {
-                            "text": "A new activity has been logged for the job."
+                          "decoratedText": {
+                            "topLabel": "Document Type",
+                            "text": "${{ env.document_type }}"
                           }
                         },
                         {
@@ -44,7 +63,7 @@ jobs:
                                 "text": "VIEW JOB IN JOBNIMBUS",
                                 "onClick": {
                                   "openLink": {
-                                    "url": "https://app.jobnimbus.com/job/${{ github.event.inputs.primary_id }}"
+                                    "url": "https://app.jobnimbus.com/job/${{ github.event.inputs.job_id }}"
                                   }
                                 }
                               }
