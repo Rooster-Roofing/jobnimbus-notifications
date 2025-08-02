@@ -1,5 +1,4 @@
 name: JobNimbus Activity to Google Chat
-
 on:
   workflow_dispatch:
     inputs:
@@ -9,7 +8,6 @@ on:
       primary_id:
         description: 'The ID of the primary related record (the Job ID)'
         required: true
-
 jobs:
   send_notification:
     runs-on: ubuntu-latest
@@ -22,37 +20,8 @@ jobs:
             {
               "cards": [
                 {
-                  "header": {
-                    "title": "${{ github.event.inputs.note_text }}",
-                    "subtitle": "Job ID: ${{ github.event.inputs.primary_id }}",
-                    "imageUrl": "https://ik.imagekit.io/roosterroofing/Untitled%20design%20(13).png?updatedAt=1752077429449",
-                    "imageStyle": "IMAGE"
-                  },
-                  "sections": [
-                    {
-                      "widgets": [
-                        {
-                          "textParagraph": {
-                            "text": "A new activity has been logged for the job."
-                          }
-                        },
-                        {
-                          "buttons": [
-                            {
-                              "textButton": {
-                                "text": "VIEW JOB IN JOBNIMBUS",
-                                "onClick": {
-                                  "openLink": {
-                                    "url": "https://app.jobnimbus.com/job/${{ github.event.inputs.primary_id }}"
-                                  }
-                                }
-                              }
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  ]
+                  "header": { "title": "${{ github.event.inputs.note_text }}", "subtitle": "Job ID: ${{ github.event.inputs.primary_id }}", "imageUrl": "https://ik.imagekit.io/roosterroofing/Untitled%20design%20(13).png?updatedAt=1752077429449", "imageStyle": "IMAGE" },
+                  "sections": [ { "widgets": [ { "textParagraph": { "text": "A new activity has been logged for the job." } }, { "buttons": [ { "textButton": { "text": "VIEW JOB IN JOBNIMBUS", "onClick": { "openLink": { "url": "https://app.jobnimbus.com/job/${{ github.event.inputs.primary_id }}" } } } } ] } ] } ]
                 }
               ]
             }
