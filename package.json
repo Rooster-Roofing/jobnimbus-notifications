@@ -1,9 +1,0 @@
-{
-  "name": "jobnimbus-gchat-notifier",
-  "version": "1.0.0",
-  "description": "Sends Google Chat notifications for JobNimbus events",
-  "main": "send_gchat_notification.js",
-  "dependencies": {
-    "axios": "^0.21.1"
-  }
-}
