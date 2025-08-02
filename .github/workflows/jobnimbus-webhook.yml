@@ -1,0 +1,26 @@
+name: JobNimbus to Google Chat Notification
+
+on:
+  repository_dispatch:
+    types: [jobnimbus_document_created]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Send Google Chat Notification
+        run: node send_gchat_notification.js
+        env:
+          GCHAT_WEBHOOK_URL: ${{ secrets.GCHAT_WEBHOOK_URL }}
+          JOBNIMBUS_PAYLOAD: ${{ toJSON(github.event.client_payload) }}
