@@ -8,7 +8,7 @@ on:
         description: 'The full text of the JobNimbus activity note'
         required: true
         default: 'Document Created | N/A | Unknown User | Unknown Job | 2025-08-02T12:00:00Z'
-      job_number:
+      job_id:
         description: 'The JobNimbus ID for the related job'
         required: false
         default: '1164'
@@ -19,7 +19,7 @@ jobs:
     steps:
       # Step 1: Parse the incoming note text to extract details
       - name: Parse Activity Note
-        number: parser
+        id: parser
         run: |
           # The note text is received as a single string, e.g., "Document Created | Proposal Created | Reina Toledo ..."
           # We use the pipe '|' as a delimiter to split it into parts
