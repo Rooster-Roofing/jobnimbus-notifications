@@ -1,8 +1,17 @@
-name: JobNimbus to Google Chat Notification
+name: Notify Google Chat on Material Confirmation Update
 
 on:
-  repository_dispatch:
-    types: [jobnimbus_document_created]
+  workflow_dispatch:
+    inputs:
+      contact_name:
+        description: 'The display name of the primary contact'
+        required: true
+      job_address:
+        description: 'The first line of the job address'
+        required: true
+      document_link:
+        description: 'A direct URL to the created document'
+        required: true
 
 jobs:
   notify:
@@ -11,16 +20,53 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '16'
-
-      - name: Install dependencies
-        run: npm install
+      - name: Update Node.js script with received data
+        run: |
+          # This script is a placeholder to demonstrate passing data.
+          # In a real scenario, your main script would read these env vars.
+          echo "Received contact: ${{ github.event.inputs.contact_name }}"
+          echo "Received address: ${{ github.event.inputs.job_address }}"
 
       - name: Send Google Chat Notification
-        run: node send_gchat_notification.js
-        env:
-          GCHAT_WEBHOOK_URL: ${{ secrets.GCHAT_WEBHOOK_URL }}
-          JOBNIMBUS_PAYLOAD: ${{ toJSON(github.event.client_payload) }}
+        uses: peter-evans/webhook-action@v2
+        with:
+          url: ${{ secrets.GCHAT_WEBHOOK_URL }}
+          payload-file: .github/workflows/gchat-payload.json
+          payload: |
+            {
+              "cards": [
+                {
+                  "header": {
+                    "title": "Confirmation of Materials Document Created",
+                    "subtitle": "${{ github.event.inputs.contact_name }} – ${{ github.event.inputs.job_address }}",
+                    "imageUrl": "https://ik.imagekit.io/roosterroofing/Untitled%20design%20(13).png?updatedAt=1752077429449",
+                    "imageStyle": "IMAGE"
+                  },
+                  "sections": [
+                    {
+                      "widgets": [
+                        {
+                          "textParagraph": {
+                            "text": "The <b>Confirmation of Materials</b> document for this job has progressed. See status below:<br><br>✔️ Document Created<br>📤 Document Sent<br>✍️ Document Signed"
+                          }
+                        },
+                        {
+                          "buttons": [
+                            {
+                              "textButton": {
+                                "text": "VIEW DOCUMENT",
+                                "onClick": {
+                                  "openLink": {
+                                    "url": "${{ github.event.inputs.document_link }}"
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
